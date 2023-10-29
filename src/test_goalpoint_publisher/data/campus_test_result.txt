@@ -1,0 +1,2 @@
+Reached waypoint 0 in 4274.78 seconds.
+Reached waypoint 1 in 148.745 seconds.

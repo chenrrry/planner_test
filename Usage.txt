@@ -1,0 +1,1 @@
+roslaunch test_goalpoint_publisher test_publisher.launch

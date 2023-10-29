@@ -1,0 +1,4 @@
+<launch>
+    <!-- Run the test_goalpoint_publisher node -->
+    <node pkg="test_goalpoint_publisher" type="test_goalpoint_publisher_node" name="test_goalpoint_publisher_node" output="screen" />
+</launch>
