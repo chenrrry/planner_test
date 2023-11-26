@@ -6,200 +6,155 @@
 #include <fstream>
 #include <ros/package.h>
 #include <std_msgs/Bool.h>
+#include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/PoseWithCovarianceStamped.h"
+#include "std_msgs/Empty.h"
+#include "std_msgs/Int32.h" 
+
 
 class GoalPointPublisher
 {
 private:
     ros::NodeHandle nh_;
-    ros::Publisher pub_;
-    ros::Publisher pub_joy_;
-    ros::Publisher update_publisher_;
+    ros::Publisher pub_start_;
+    ros::Publisher pub_goal_;
     ros::Subscriber sub_;
 
-    std::vector<geometry_msgs::Point> waypoints_;
-    size_t current_waypoint_index_;
-    ros::Time last_waypoint_time_;
+    std::vector<geometry_msgs::Point> points_;
+    std::vector<geometry_msgs::PoseStamped> start_;
+    std::vector<geometry_msgs::PoseStamped> goal_;
+    size_t current_point_index_;
+    ros::Time last_point_time_;
     std::ofstream outfile;
-    bool  whether_update_graph_each_reach;
 
-    void odomCallback(const nav_msgs::Odometry::ConstPtr& odom);
-    void publishGoalPoint(const geometry_msgs::Point& goal_point);
-    std::vector<geometry_msgs::Point> readWaypointsFromFile(const std::string& file_path);
+    void numberCallback(const std_msgs::Int32::ConstPtr& msg);
+    void publishGoalPoint(const geometry_msgs::Point& start_point, const geometry_msgs::Point& goal_point);
+    std::vector<geometry_msgs::Point> readPointsFromFile(const std::string& file_path);
 
 public:
     GoalPointPublisher();
     ~GoalPointPublisher();
     void publishNextGoalPoint();
-    void pushWaypoint(double x, double y, double z);
+    void pushPoint(double x, double y, double z);
     
 };
 
 
 GoalPointPublisher::GoalPointPublisher()
-    : current_waypoint_index_(0)
+    : current_point_index_(0)
 {
 
-    pub_ = nh_.advertise<geometry_msgs::PointStamped>("/goal_point", 5);
-    pub_joy_ = nh_.advertise<sensor_msgs::Joy>("/joy", 5);
-    sub_ = nh_.subscribe<nav_msgs::Odometry>("/state_estimation", 5, &GoalPointPublisher::odomCallback, this);
-    update_publisher_ = nh_.advertise<std_msgs::Bool>( "/update_visibility_graph", 5 );
-    whether_update_graph_each_reach = true;
+    pub_start_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1);
+    pub_goal_ = nh_.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1);
+    sub_ = nh_.subscribe("/start_notification", 1, &GoalPointPublisher::numberCallback, this);
 
     std::string pkg_path = ros::package::getPath("test_goalpoint_publisher");
     std::cout << "current package : " << pkg_path;
-    std::string waypoints_file_path = pkg_path + "/data/tunnel_test.txt";
-    std::vector<geometry_msgs::Point> waypoints_from_file = readWaypointsFromFile(waypoints_file_path);
+    std::string points_file_path = pkg_path + "/data/tunnel_test.txt";
+    std::vector<geometry_msgs::Point> points_from_file = readPointsFromFile(points_file_path);
     std::string output_file_path = pkg_path + "/data/tunnel_test_result.txt";; 
     outfile.open(output_file_path);
     
-    for (const auto& waypoint : waypoints_from_file)
+    for (const auto& point : points_from_file)
     {
-        this->pushWaypoint(waypoint.x, waypoint.y, 0.0);
+        this->pushPoint(point.x, point.y, point.z);
     }
 
-    last_waypoint_time_ = ros::Time::now();
+    last_point_time_ = ros::Time::now();
 }
 
 GoalPointPublisher::~GoalPointPublisher() 
 {
     outfile.close();
 }
-std::vector<geometry_msgs::Point> GoalPointPublisher::readWaypointsFromFile(const std::string& file_path)
+
+std::vector<geometry_msgs::Point> GoalPointPublisher::readPointsFromFile(const std::string& file_path)
 {
-    std::vector<geometry_msgs::Point> waypoints;
+    std::vector<geometry_msgs::Point> points;
     std::ifstream infile(file_path);
     
     if (!infile.is_open())
     {
         ROS_ERROR("Failed to open waypoints file: %s", file_path.c_str());
-        return waypoints;
+        return points;
     }
 
-    double x, y;
-    while (infile >> x >> y)
+    double x, y, t;
+    while (infile >> x >> y >> t )
     {
-        geometry_msgs::Point waypoint;
-        waypoint.x = x;
-        waypoint.y = y;
-        waypoint.z = 0.0;  // Assuming flat ground
-        waypoints.push_back(waypoint);
+        geometry_msgs::Point point;
+        point.x = x;
+        point.y = y;
+        point.z = t;  // Assuming flat ground
+        points.push_back(point);
     }
 
     infile.close();
-    return waypoints;
+    return points;
 }
 
-
-
-void GoalPointPublisher::pushWaypoint(double x, double y, double z)
+void GoalPointPublisher::pushPoint(double x, double y, double z)
 {
     geometry_msgs::Point point;
     point.x = x;
     point.y = y;
     point.z = z;
-    waypoints_.push_back(point);
+    points_.push_back(point);
 }
 
 
-
-
-void GoalPointPublisher::odomCallback(const nav_msgs::Odometry::ConstPtr& odom)
+void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //收到类型更改
 {
-    // // 使用 std::cout 打印 odom 的信息
-    // std::cout << "Received odom: "
-    //           << "position (x: " << odom->pose.pose.position.x
-    //           << ", y: " << odom->pose.pose.position.y
-    //           << ", z: " << odom->pose.pose.position.z << "), "
-    //           << "orientation (x: " << odom->pose.pose.orientation.x
-    //           << ", y: " << odom->pose.pose.orientation.y
-    //           << ", z: " << odom->pose.pose.orientation.z
-    //           << ", w: " << odom->pose.pose.orientation.w << ")"
-    //           << std::endl;
-    double distance_to_waypoint = std::sqrt(
-        std::pow(odom->pose.pose.position.x - waypoints_[current_waypoint_index_].x, 2) +
-        std::pow(odom->pose.pose.position.y - waypoints_[current_waypoint_index_].y, 2)
-    );
 
-    if (distance_to_waypoint < 0.5)  // Threshold to consider "reached", you can adjust as needed
+    int number = msg->data;
+    outfile<<"data "<<number<<std::endl;
+    if (number==0)  // Threshold to consider "reached", you can adjust as needed
     {
-        ros::Duration travel_time = ros::Time::now() - last_waypoint_time_;
-
-        outfile << "Reached waypoint " << current_waypoint_index_  
-                << " in " << travel_time.toSec() << " seconds." << std::endl;
-
-        current_waypoint_index_++;
-        last_waypoint_time_ = ros::Time::now();
-
-        if (current_waypoint_index_ >= waypoints_.size()) {
-
-            outfile << "All waypoints reached." << std::endl;  
-            ros::shutdown();
-
-        }
-        if(whether_update_graph_each_reach)
-        {
-            std_msgs::Bool msg;
-            msg.data = true;
-            update_publisher_.publish(msg);
-        }
-        
-    }else{
-            publishNextGoalPoint();
+        current_point_index_=0;
     }
+    publishNextGoalPoint(); 
 }
-
-
 
 void GoalPointPublisher::publishNextGoalPoint()
 {
-    if (current_waypoint_index_ < waypoints_.size())
+    if (current_point_index_ +1< points_.size())
     {
-        publishGoalPoint(waypoints_[current_waypoint_index_]);
+        publishGoalPoint(points_[current_point_index_],points_[current_point_index_+1]);
     }
 }
-void GoalPointPublisher::publishGoalPoint(const geometry_msgs::Point& goal_point)
+void GoalPointPublisher::publishGoalPoint(const geometry_msgs::Point& start_point, const geometry_msgs::Point& goal_point)
 {
+    geometry_msgs::PoseWithCovarianceStamped start;
+    start.header.frame_id = "map";
+    start.header.stamp = ros::Time::now();
+    
+    start.pose.pose.position.x=start_point.x;
+    start.pose.pose.position.y=start_point.y;
+    start.pose.pose.position.z=0;
+    start.pose.pose.orientation.x=0;
+    start.pose.pose.orientation.y=0;
+    start.pose.pose.orientation.z=0;
+    start.pose.pose.orientation.w=1;
 
+    pub_start_.publish(start);
 
-    sensor_msgs::Joy joy;
-
-    joy.axes.push_back(0);
-    joy.axes.push_back(0);
-    joy.axes.push_back(-1.0);
-    joy.axes.push_back(0);
-    joy.axes.push_back(1.0);
-    joy.axes.push_back(1.0);
-    joy.axes.push_back(0);
-    joy.axes.push_back(0);
-
-    joy.buttons.push_back(0);
-    joy.buttons.push_back(0);
-    joy.buttons.push_back(0);
-    joy.buttons.push_back(0);
-    joy.buttons.push_back(0);
-    joy.buttons.push_back(0);
-    joy.buttons.push_back(0);
-    joy.buttons.push_back(1);
-    joy.buttons.push_back(0);
-    joy.buttons.push_back(0);
-    joy.buttons.push_back(0);
-
-    joy.header.stamp = ros::Time::now();
-    joy.header.frame_id = "goalpoint_tool";
-
-    geometry_msgs::PointStamped point;
-    point.header.frame_id = "map";
-    point.header.stamp = ros::Time::now();
-    point.point = goal_point;
-
-    pub_.publish(point);
+    geometry_msgs::PoseStamped goal;
+    goal.header.frame_id = "map";
+    goal.header.stamp = ros::Time::now();
+    goal.pose.position.x=goal_point.x;
+    goal.pose.position.y=goal_point.y;
+    goal.pose.position.z=0;
+    goal.pose.orientation.x=0;
+    goal.pose.orientation.y=0;
+    goal.pose.orientation.z=0;
+    goal.pose.orientation.w=1;
 
     usleep(10000); // small sleep before next publish
-    pub_.publish(point);
+    pub_goal_.publish(goal);
 
     usleep(10000); // set to 1000000us (1s) on real robot
-    pub_joy_.publish(joy);
-    // std::cout<<"publish goal_point;\n";
+    // pub_joy_.publish(joy);
+    outfile<<"publish start and goal";
 }
 
 int main(int argc, char** argv)
