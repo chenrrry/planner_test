@@ -1,9 +1,75 @@
-publish start and goaldata 0
-publish start and goaldata 0
-publish start and goaldata 0
-publish start and goaldata 0
-publish start and goaldata 0
-publish start and goaldata 0
-publish start and goaldata 0
-publish start and goaldata 0
+x: 12.0031 y: 60.7271 z: 0
+x: 74.7767 y: 34.7366 z: 0
+x: 44.4588 y: 88.8283 z: 0
+x: 93.7512 y: 40.4389 z: 0
+x: 13.896 y: 79.8741 z: 0
+x: 94.6172 y: 9.65812 z: 0
+x: 91.4567 y: 73.6686 z: 0
+x: 93.0823 y: 12.116 z: 0
+x: 14.8276 y: 72.5373 z: 0
+x: 95.2473 y: 12.7834 z: 0
+publishNextGoalPoint
+0
+publish start and goal
+data: 0
+cp0
+publishNextGoalPoint
+0
+publish start and goal
+data: 1
+Reached point 0 in 105.985 seconds.
+cp2
+publishNextGoalPoint
+2
+publish start and goal
+data: 2
+Reached point 2 in 24.8267 seconds.
+cp4
+publishNextGoalPoint
+4
+publish start and goal
+data: 3
+Reached point 4 in 38.6798 seconds.
+cp6
+publishNextGoalPoint
+6
+publish start and goal
+data: 4
+Reached point 6 in 11.8257 seconds.
+cp8
+publishNextGoalPoint
+8
+publish start and goal
+data: 5
+Reached point 8 in 90.7536 seconds.
+cp10
+publishNextGoalPoint
+data: 0
+cp0
+publishNextGoalPoint
+0
+publish start and goal
+data: 1
+Reached point 0 in 105.789 seconds.
+cp2
+publishNextGoalPoint
+2
+publish start and goal
+data: 2
+Reached point 2 in 24.9177 seconds.
+cp4
+publishNextGoalPoint
+4
+publish start and goal
+data: 3
+Reached point 4 in 38.8861 seconds.
+cp6
+publishNextGoalPoint
+6
+publish start and goal
+data: 4
+Reached point 6 in 11.7561 seconds.
+cp8
+publishNextGoalPoint
+8
 publish start and goal

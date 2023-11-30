@@ -100,30 +100,41 @@ void GoalPointPublisher::pushPoint(double x, double y, double z)
     point.y = y;
     point.z = z;
     points_.push_back(point);
+    outfile<<"x: "<<x<<" y: "<<y<<" z: "<<z<<std::endl;
 }
 
 
 void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //收到类型更改
 {
-
+    
     int number = msg->data;
-    outfile<<"data "<<number<<std::endl;
+    outfile<<"data: "<<number<<std::endl;
     if (number==0)  // Threshold to consider "reached", you can adjust as needed
     {
         current_point_index_=0;
+    }else{
+        ros::Duration travel_time = ros::Time::now() - last_point_time_;
+        outfile << "Reached point " << current_point_index_  
+        << " in " << travel_time.toSec() << " seconds." << std::endl;
+        current_point_index_=number*2;
     }
+    outfile<<"cp"<<current_point_index_<<"size "<<points_.size() <<std::endl;
+    last_point_time_ = ros::Time::now();
     publishNextGoalPoint(); 
 }
 
 void GoalPointPublisher::publishNextGoalPoint()
 {
+    outfile<<"publishNextGoalPoint"<<std::endl;
     if (current_point_index_ +1< points_.size())
     {
         publishGoalPoint(points_[current_point_index_],points_[current_point_index_+1]);
     }
 }
+
 void GoalPointPublisher::publishGoalPoint(const geometry_msgs::Point& start_point, const geometry_msgs::Point& goal_point)
 {
+    outfile<<current_point_index_<<std::endl;
     geometry_msgs::PoseWithCovarianceStamped start;
     start.header.frame_id = "map";
     start.header.stamp = ros::Time::now();
@@ -154,7 +165,7 @@ void GoalPointPublisher::publishGoalPoint(const geometry_msgs::Point& start_poin
 
     usleep(10000); // set to 1000000us (1s) on real robot
     // pub_joy_.publish(joy);
-    outfile<<"publish start and goal";
+    outfile<<"publish start and goal"<<std::endl;
 }
 
 int main(int argc, char** argv)
@@ -162,10 +173,10 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "goal_point_publisher_node");
     
     GoalPointPublisher goal_publisher;
-    
+    std::cout<<"aa"<<std::endl;
     // Immediately publish the first waypoint
     goal_publisher.publishNextGoalPoint();
-
+    std::cout<<"bb"<<std::endl;
     ros::spin(); //there will continue the loop;
 
     return 0;
