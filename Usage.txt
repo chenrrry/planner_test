@@ -1,3 +1,1 @@
-catkin_make & source devel/setup.bash
-
-roslaunch test_goalpoint_publisher test_publisher.launch
+catkin_make && source devel/setup.bash &&  roslaunch test_goalpoint_publisher test_publisher.launch
