@@ -15,7 +15,10 @@
 #include <string>
 #include <nav_msgs/OccupancyGrid.h>
 #include <tf/tf.h>
-
+#include <nlohmann/json.hpp>
+#include <fstream>
+// 使用命名空间以简化代码
+using json = nlohmann::json;
 
 class GoalPointPublisher
 {
@@ -73,14 +76,22 @@ GoalPointPublisher::GoalPointPublisher()
     subPathVehicles = nh_.subscribe("/sPathVehicle", 1, &GoalPointPublisher::pathVehiclesCallback, this);
     subPath2DNodes = nh_.subscribe("/path2DNodes", 1, &GoalPointPublisher::path2DNodesCallback, this);
     subPathBoxes = nh_.subscribe("/pathBoxes", 1, &GoalPointPublisher::pathBoxesCallback, this);
-    
-    test_file="test_map_thin_1m_to_10pixel_1_cry";
 
     std::string pkg_path = ros::package::getPath("test_goalpoint_publisher");
     std::cout << "current package : " << pkg_path;
+    // 创建一个json对象
+    json j;
+
+    // 打开一个文件流来读取JSON文件
+    std::ifstream file(pkg_path + "/config/base_config.json");
+
+    // 将文件内容解析到json对象
+    file >> j;  
+    test_file=j["currentTest"] ;
+
     std::string points_file_path = pkg_path + "/data/"+test_file+".txt";
     std::vector<geometry_msgs::Point> points_from_file = readPointsFromFile(points_file_path);
-    std::string output_file_path = pkg_path + "/data/"+test_file+"_result.txt";
+    std::string output_file_path = pkg_path + "/output/"+test_file+"_result.txt";
     outfile.open(output_file_path);
 
     outfile<<"111 "<<output_file_path<<std::endl;
@@ -142,7 +153,7 @@ void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //
     if(number==-1){
         outfile_viz.close();
         std::string output_file_path_viz = ros::package::getPath("test_goalpoint_publisher") + 
-            "/data/"+test_file+"_result_"+std::to_string(current_point_index_/2)+".txt";; 
+            "/output/"+test_file+"_result_"+std::to_string(current_point_index_/2)+".txt";; 
         outfile_viz.open(output_file_path_viz);
         outfile<<output_file_path_viz<<std::endl;
         return;
@@ -282,11 +293,10 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "goal_point_publisher_node");
     
     GoalPointPublisher goal_publisher;
-    std::cout<<"aa"<<std::endl;
+    std::cout<<"发送开始"<<std::endl;
     // Immediately publish the first waypoint
     goal_publisher.publishNextGoalPoint();
-    std::cout<<"bb"<<std::endl;
+    std::cout<<"发送结束"<<std::endl;
     ros::spin(); //there will continue the loop;
-
     return 0;
 }
