@@ -1,0 +1,16 @@
+111 /home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/output/TPCAP_11_result.txt
+x: 66.4132 y: 76.6236 z: 9.66517
+x: 183.264 y: 351.488 z: 11.3003
+data: 0
+cp0size 2
+publishNextGoalPoint
+0
+00-0.9927850.119905
+publish start and goal
+1
+2
+data: -1
+/home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/output/TPCAP_11_resultViz_0.txt
+1
+2
+data: -2

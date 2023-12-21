@@ -1,0 +1,11 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "ROS: Launch 2", //Right answer
+            "request": "launch",
+            "target": "/home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/launch/test_publisher.launch",
+            "type": "ros"
+        }
+    ]
+}

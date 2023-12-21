@@ -4,13 +4,14 @@ from PIL import Image, ImageDraw
 
 # 打开图片
 index = 10
-image = Image.open(f"./data/TPCAP/TPCAP_{index}.png")
+image = Image.open(f"../data/TPCAP/TPCAP_{index}.png")
 width, height = image.size
 
-with open(f'./data/TPACP{index}_result_0.txt', 'r') as file:
+with open(f'./TPCAP_{index}_result_0.txt', 'r') as file:
     # 读取整个文件内容
     content = file.read()
 
+save_path = f"../trajectory/TPCAP_{index}_answer_trajectory.png"
 if image.mode != 'RGBA':
     image = image.convert('RGBA')
 
@@ -44,7 +45,13 @@ while i<length:
         # color_g=round(float(words[i+1])*256)
         # color_b=round(float(words[i+2])*256)
         # color_a=round(float(words[i+3])*256)
-        draw.point((int_x,int_y), fill='blue')
+        # 定义点的中心位置和大小
+        radius = 8  # 点的半径
+
+        # 绘制一个圆形来表示点
+        left_up_point = (int_x - radius, int_y - radius)
+        right_down_point = (int_x + radius, int_y + radius)
+        draw.ellipse([left_up_point, right_down_point], fill='blue')
         i+=4
         continue
     if words[i] == "2":
@@ -76,4 +83,4 @@ while i<length:
 
 image = Image.alpha_composite(image, tmp)
 # 保存修改后的图片
-image.save(f"./trajectory/TPCAP{index}_answer_trajectory.png")
+image.save(save_path)
