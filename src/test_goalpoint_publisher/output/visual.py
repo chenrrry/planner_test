@@ -1,10 +1,13 @@
-
-#  map_thin_1m_to_6pixel.png
 from PIL import Image, ImageDraw
 from scipy.spatial.transform import Rotation as R
 from scipy.interpolate import CubicSpline
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import font_manager
+
+# # 设置中文和负号正常显示
+# plt.rcParams['font.sans-serif'] = ['SimHei']
+# plt.rcParams['axes.unicode_minus'] = False
 
 whether_fit = True
 def quaternion_to_euler(x, y, z,w):
@@ -12,7 +15,7 @@ def quaternion_to_euler(x, y, z,w):
     将四元数(w, x, y, z)转换为欧拉角(roll, pitch, yaw)。
     """
     rotation = R.from_quat([x, y, z, w])
-    roll, pitch, yaw = rotation.as_euler('xyz', degrees=True)
+    roll, pitch, yaw = rotation.as_euler('xyz', degrees=False)
     return roll, pitch, yaw
 
 vehicleNode3D = []
@@ -46,11 +49,9 @@ words = content.split()
 
 length=len(words)
 flag=False
-def convert_to_int(value):
-    return round(float(value))
 
 def calculate_position(x, y, scale=10):
-    return convert_to_int(x) * scale, height - convert_to_int(y) * scale
+    return float(x) * scale, height - float(y) * scale
 
 def draw_point(draw, x, y, radius=8):
     left_up_point = (x - radius, y - radius)
@@ -59,20 +60,21 @@ def draw_point(draw, x, y, radius=8):
 
 def process_type_1(draw, words, i):
     int_x, int_y = calculate_position(words[i+1], words[i+2])
-    draw_point(draw, int_x, int_y)
-    return i + 11  # 7 + 4
+    # draw_point(draw, int_x, int_y)
+    return i + 11  
 
 def process_type_2(words, i, vehicleNode3D):
-    vehicle_x, vehicle_y = float(words[i+2]), float(words[i+3])
-    quaternion = [float(words[j]) for j in range(i+5, i+9)]
+    vehicle_x, vehicle_y = calculate_position(words[i+1], words[i+2])
+    quaternion = [float(words[j]) for j in range(i+4, i+8)]
     roll, pitch, yaw = quaternion_to_euler(*quaternion)
     vehicleNode3D.append([vehicle_x, vehicle_y, yaw])
-    return i + 18  # 15 + 3
+    return i + 15  
 
 def process_type_3(draw, words, i):
     points = []
+    i+=1
     for _ in range(4):
-        point_x, point_y = calculate_position(words[i+1], words[i+2])
+        point_x, point_y = calculate_position(words[i], words[i+1])
         points.append((point_x, point_y))
         i += 3
     draw.line(points + [points[0]], fill='black', width=2)
@@ -91,8 +93,12 @@ image = Image.alpha_composite(image, tmp)
 # 保存修改后的图片
 image.save(save_path)
 
+
 if whether_fit:
     # 提取 x, y 和 t
+    imageBase = Image.open(save_path)
+    fig, ax = plt.subplots()
+    ax.imshow(imageBase)  # 在坐标轴上显示图片
     x = [node[0] for node in vehicleNode3D]
     y = [node[1] for node in vehicleNode3D]
     t = [node[2] for node in vehicleNode3D]
@@ -106,9 +112,8 @@ if whether_fit:
     y_smooth = cs_y(param_smooth)
 
     # 可视化结果
-    plt.figure()
-    plt.plot(x, y, 'o', label='原始点')
-    plt.plot(x_smooth, y_smooth, label='平滑路径')
-    plt.quiver(x, y, np.cos(t), np.sin(t), color='r', scale=10, label='方向')
-    plt.legend()
+    # ax.plot(x, y, 'o', label='original points')
+    ax.plot(x_smooth, y_smooth, label='path')
+    ax.quiver(x, y, np.cos(t), np.sin(t), color='r', scale=10, label='direction')
+    ax.legend()
     plt.show()

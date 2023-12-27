@@ -43,6 +43,8 @@ private:
     ros::Time last_point_time_;
     std::ofstream outfile;
     std::ofstream outfile_viz;
+    ros::Timer timerForWrite;
+
 
     void numberCallback(const std_msgs::Int32::ConstPtr& msg);
     void publishGoalPoint(const geometry_msgs::Point& start_point, const geometry_msgs::Point& goal_point);
@@ -53,7 +55,10 @@ private:
     void pathVehiclesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
     void path2DNodesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
     void pathBoxesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
-
+    void writeCallback(const ros::TimerEvent&) {
+        outfile.flush(); 
+        outfile_viz.flush(); 
+    }
     bool whetherPublishFirstGoalPoint = false;
 
 public:
@@ -61,6 +66,7 @@ public:
     ~GoalPointPublisher();
     void publishNextGoalPoint();
     void pushPoint(double x, double y, double z);
+    bool subSmoothTopic = false;
     
 };
 
@@ -72,12 +78,21 @@ GoalPointPublisher::GoalPointPublisher()
     pub_goal_ = nh_.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1);
     sub_ = nh_.subscribe("/start_notification", 5, &GoalPointPublisher::numberCallback, this);
 
-    subPath = nh_.subscribe("/Path", 1, &GoalPointPublisher::pathCallback, this);
-    subPathNodes = nh_.subscribe("/PathNodes", 1, &GoalPointPublisher::pathNodesCallback, this);
-    subPathVehicles = nh_.subscribe("/PathVehicle", 1, &GoalPointPublisher::pathVehiclesCallback, this);
-    subPath2DNodes = nh_.subscribe("/path2DNodes", 1, &GoalPointPublisher::path2DNodesCallback, this);
-    subPathBoxes = nh_.subscribe("/pathBoxes", 1, &GoalPointPublisher::pathBoxesCallback, this);
-
+    if(subSmoothTopic){
+        subPath = nh_.subscribe("sPath", 1, &GoalPointPublisher::pathCallback, this);
+        subPathNodes = nh_.subscribe("sPathNodes", 1, &GoalPointPublisher::pathNodesCallback, this);
+        subPathVehicles = nh_.subscribe("sPathVehicle", 1, &GoalPointPublisher::pathVehiclesCallback, this);
+        subPath2DNodes = nh_.subscribe("sPath2DNodes", 1, &GoalPointPublisher::path2DNodesCallback, this);
+        subPathBoxes = nh_.subscribe("sPathBoxes", 1, &GoalPointPublisher::pathBoxesCallback, this);
+        
+    }else{
+        subPath = nh_.subscribe("/path", 1, &GoalPointPublisher::pathCallback, this);
+        subPathNodes = nh_.subscribe("/pathNodes", 1, &GoalPointPublisher::pathNodesCallback, this);
+        subPathVehicles = nh_.subscribe("/pathVehicle", 1, &GoalPointPublisher::pathVehiclesCallback, this);
+        subPath2DNodes = nh_.subscribe("/path2DNodes", 1, &GoalPointPublisher::path2DNodesCallback, this);
+        subPathBoxes = nh_.subscribe("/pathBoxes", 1, &GoalPointPublisher::pathBoxesCallback, this);
+    }
+    timerForWrite = nh_.createTimer(ros::Duration(1), &GoalPointPublisher::writeCallback, this);
     std::string pkg_path = ros::package::getPath("test_goalpoint_publisher");
     std::cout << "current package : " << pkg_path;
     // 创建一个json对象
@@ -308,10 +323,6 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "goal_point_publisher_node");
     
     GoalPointPublisher goal_publisher;
-
-    // Immediately publish the first waypoint
-    // goal_publisher.publishNextGoalPoint();
-
     ros::spin(); //there will continue the loop;
     return 0;
 }
