@@ -54,6 +54,8 @@ private:
     void path2DNodesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
     void pathBoxesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
 
+    bool whetherPublishFirstGoalPoint = false;
+
 public:
     GoalPointPublisher();
     ~GoalPointPublisher();
@@ -66,14 +68,13 @@ public:
 GoalPointPublisher::GoalPointPublisher()
     : current_point_index_(0)
 {
-
     pub_start_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1);
     pub_goal_ = nh_.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1);
     sub_ = nh_.subscribe("/start_notification", 5, &GoalPointPublisher::numberCallback, this);
 
-    subPath = nh_.subscribe("/sPath", 1, &GoalPointPublisher::pathCallback, this);
-    subPathNodes = nh_.subscribe("/sPathNodes", 1, &GoalPointPublisher::pathNodesCallback, this);
-    subPathVehicles = nh_.subscribe("/sPathVehicle", 1, &GoalPointPublisher::pathVehiclesCallback, this);
+    subPath = nh_.subscribe("/Path", 1, &GoalPointPublisher::pathCallback, this);
+    subPathNodes = nh_.subscribe("/PathNodes", 1, &GoalPointPublisher::pathNodesCallback, this);
+    subPathVehicles = nh_.subscribe("/PathVehicle", 1, &GoalPointPublisher::pathVehiclesCallback, this);
     subPath2DNodes = nh_.subscribe("/path2DNodes", 1, &GoalPointPublisher::path2DNodesCallback, this);
     subPathBoxes = nh_.subscribe("/pathBoxes", 1, &GoalPointPublisher::pathBoxesCallback, this);
 
@@ -102,6 +103,7 @@ GoalPointPublisher::GoalPointPublisher()
     }
 
     last_point_time_ = ros::Time::now();
+    std::cout << "初始化handler已经完成" << std::endl;
 }
 
 GoalPointPublisher::~GoalPointPublisher() 
@@ -146,7 +148,14 @@ void GoalPointPublisher::pushPoint(double x, double y, double z)
 
 
 void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //收到类型更改
-{
+{   
+    if(whetherPublishFirstGoalPoint == true && msg->data == 0){
+        return;
+    }
+    if(msg->data == 0){
+        whetherPublishFirstGoalPoint = true;
+    }
+    std::cout<<"收到消息"<<std::endl;
     sleep(3); // sleep for 3 second before publishing next goal point
     int number = msg->data;
     outfile<<"data: "<<number<<std::endl;

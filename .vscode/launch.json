@@ -6,6 +6,12 @@
             "request": "launch",
             "target": "/home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/launch/test_publisher.launch",
             "type": "ros"
-        }
+        },{
+            "name": "Python: 当前文件",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "cwd": "${workspaceFolder}"
+          }
     ]
 }

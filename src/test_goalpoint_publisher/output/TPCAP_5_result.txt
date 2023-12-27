@@ -11,3 +11,10 @@ publish start and goal
 2
 data: -1
 /home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/output/TPCAP_5_resultViz_0.txt
+1
+2
+data: 1
+Reached point 0 in 12.1014 seconds.
+cp2size 2
+publishNextGoalPoint
+data: -2
