@@ -21,7 +21,7 @@ def quaternion_to_euler(x, y, z,w):
 vehicleNode3D = []
 
 # 打开图片
-index = 2
+index = 22
 image = Image.open(f"./src/test_goalpoint_publisher/data/TPCAP/TPCAP_{index}.png")
 width, height = image.size
 
@@ -77,7 +77,7 @@ def process_type_3(draw, words, i):
         point_x, point_y = calculate_position(words[i], words[i+1])
         points.append((point_x, point_y))
         i += 3
-    draw.line(points + [points[0]], fill='black', width=2)
+    draw.line(points + [points[0]], fill='black', width=4)
     return i
 
 i = 0
@@ -96,9 +96,12 @@ image.save(save_path)
 
 if whether_fit:
     # 提取 x, y 和 t
-    imageBase = Image.open(save_path)
-    fig, ax = plt.subplots()
-    ax.imshow(imageBase)  # 在坐标轴上显示图片
+    # imageBase = Image.open(save_path)
+    imageBase = image
+    # fig, ax = plt.subplots()
+    # ax.imshow(imageBase)  # 在坐标轴上显示图片
+    # plt.show()
+    draw = ImageDraw.Draw(imageBase)
     x = [node[0] for node in vehicleNode3D]
     y = [node[1] for node in vehicleNode3D]
     t = [node[2] for node in vehicleNode3D]
@@ -111,9 +114,14 @@ if whether_fit:
     x_smooth = cs_x(param_smooth)
     y_smooth = cs_y(param_smooth)
 
-    # 可视化结果
-    # ax.plot(x, y, 'o', label='original points')
-    ax.plot(x_smooth, y_smooth, label='path')
-    ax.quiver(x, y, np.cos(t), np.sin(t), color='r', scale=10, label='direction')
-    ax.legend()
-    plt.show()
+    # # 可视化结果
+    # # ax.plot(x, y, 'o', label='original points')
+    # ax.plot(x_smooth, y_smooth, label='path')
+    # # ax.quiver(x, y, np.cos(t), np.sin(t), color='r', scale=10, label='direction')
+    # ax.legend()
+    # plt.savefig(f'./src/test_goalpoint_publisher/linePicture/TPCAP_{index}_forPaper.png')
+    # plt.show()
+    points = list(zip(x_smooth, y_smooth))
+    draw.line(points, fill='red', width=10)  # 您可以选择线条的颜色和宽度
+    imageBase.save(f'./src/test_goalpoint_publisher/linePicture/TPCAP_{index}_forPaper.png')
+    imageBase.show()

@@ -58,6 +58,7 @@ private:
     void writeCallback(const ros::TimerEvent&) {
         outfile.flush(); 
         outfile_viz.flush(); 
+        std::cout<<"已经写入文件"<<std::endl;
     }
     bool whetherPublishFirstGoalPoint = false;
 
