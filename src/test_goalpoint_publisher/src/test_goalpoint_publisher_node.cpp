@@ -80,18 +80,18 @@ GoalPointPublisher::GoalPointPublisher()
     sub_ = nh_.subscribe("/start_notification", 5, &GoalPointPublisher::numberCallback, this);
 
     if(subSmoothTopic){
-        subPath = nh_.subscribe("sPath", 1, &GoalPointPublisher::pathCallback, this);
-        subPathNodes = nh_.subscribe("sPathNodes", 1, &GoalPointPublisher::pathNodesCallback, this);
-        subPathVehicles = nh_.subscribe("sPathVehicle", 1, &GoalPointPublisher::pathVehiclesCallback, this);
-        subPath2DNodes = nh_.subscribe("sPath2DNodes", 1, &GoalPointPublisher::path2DNodesCallback, this);
-        subPathBoxes = nh_.subscribe("sPathBoxes", 1, &GoalPointPublisher::pathBoxesCallback, this);
+        subPath = nh_.subscribe("sPath", 1000, &GoalPointPublisher::pathCallback, this);
+        subPathNodes = nh_.subscribe("sPathNodes", 1000, &GoalPointPublisher::pathNodesCallback, this);
+        subPathVehicles = nh_.subscribe("sPathVehicle", 1000, &GoalPointPublisher::pathVehiclesCallback, this);
+        subPath2DNodes = nh_.subscribe("sPath2DNodes", 1000, &GoalPointPublisher::path2DNodesCallback, this);
+        subPathBoxes = nh_.subscribe("sPathBoxes", 1000, &GoalPointPublisher::pathBoxesCallback, this);
         
     }else{
-        subPath = nh_.subscribe("/path", 1, &GoalPointPublisher::pathCallback, this);
-        subPathNodes = nh_.subscribe("/pathNodes", 1, &GoalPointPublisher::pathNodesCallback, this);
-        subPathVehicles = nh_.subscribe("/pathVehicle", 1, &GoalPointPublisher::pathVehiclesCallback, this);
-        subPath2DNodes = nh_.subscribe("/path2DNodes", 1, &GoalPointPublisher::path2DNodesCallback, this);
-        subPathBoxes = nh_.subscribe("/pathBoxes", 1, &GoalPointPublisher::pathBoxesCallback, this);
+        subPath = nh_.subscribe("/path", 1000, &GoalPointPublisher::pathCallback, this);
+        subPathNodes = nh_.subscribe("/pathNodes", 1000, &GoalPointPublisher::pathNodesCallback, this);
+        subPathVehicles = nh_.subscribe("/pathVehicle", 1000, &GoalPointPublisher::pathVehiclesCallback, this);
+        subPath2DNodes = nh_.subscribe("/path2DNodes", 1000, &GoalPointPublisher::path2DNodesCallback, this);
+        subPathBoxes = nh_.subscribe("/pathBoxes", 1000, &GoalPointPublisher::pathBoxesCallback, this);
     }
     timerForWrite = nh_.createTimer(ros::Duration(1), &GoalPointPublisher::writeCallback, this);
     std::string pkg_path = ros::package::getPath("test_goalpoint_publisher");
@@ -172,7 +172,6 @@ void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //
         whetherPublishFirstGoalPoint = true;
     }
     std::cout<<"收到消息"<<std::endl;
-    sleep(3); // sleep for 3 second before publishing next goal point
     int number = msg->data;
     outfile<<"data: "<<number<<std::endl;
     if(number==-1){
@@ -183,7 +182,8 @@ void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //
         return;
     }
     if(number == -2){
-        outfile_viz.close();
+        // outfile_viz.flush();
+        // outfile_viz.close();//发送2不能立马关闭，因为之前的可能没有来得及处理 
         return;
     }
     if (number==0)  // Threshold to consider "reached", you can adjust as needed
@@ -195,8 +195,7 @@ void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //
         << " in " << travel_time.toSec() << " seconds." << std::endl;
         current_point_index_=number*2;
     }
-
-
+    sleep(3); // sleep for 3 second before publishing next goal point
     outfile<<"cp"<<current_point_index_<<"size "<<points_.size() <<std::endl;
     last_point_time_ = ros::Time::now();
     publishNextGoalPoint(); 

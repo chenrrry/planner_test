@@ -10,6 +10,7 @@ from matplotlib import font_manager
 # plt.rcParams['axes.unicode_minus'] = False
 
 whether_fit = True
+whtether_use_success_file = False
 def quaternion_to_euler(x, y, z,w):
     """
     将四元数(w, x, y, z)转换为欧拉角(roll, pitch, yaw)。
@@ -21,13 +22,16 @@ def quaternion_to_euler(x, y, z,w):
 vehicleNode3D = []
 
 # 打开图片
-index = 22
+index = 23
 image = Image.open(f"./src/test_goalpoint_publisher/data/TPCAP/TPCAP_{index}.png")
 width, height = image.size
 
-with open(f'./src/test_goalpoint_publisher/output/TPCAP_{index}_resultViz_0.txt', 'r') as file:
-    # 读取整个文件内容
-    content = file.read()
+if whtether_use_success_file:
+    with open(f'./src/test_goalpoint_publisher/output/TPCAP_{index}_resultViz_0_success.txt', 'r') as file:
+        content = file.read()
+else:
+    with open(f'./src/test_goalpoint_publisher/output/TPCAP_{index}_resultViz_0.txt', 'r') as file:
+        content = file.read()
 
 save_path = f"./src/test_goalpoint_publisher/trajectory/TPCAP_{index}_answer_trajectory.png"
 if image.mode != 'RGBA':
@@ -59,15 +63,16 @@ def draw_point(draw, x, y, radius=8):
     draw.ellipse([left_up_point, right_down_point], fill='blue')
 
 def process_type_1(draw, words, i):
-    int_x, int_y = calculate_position(words[i+1], words[i+2])
-    # draw_point(draw, int_x, int_y)
+    vehicle_x, vehicle_y = calculate_position(words[i+1], words[i+2])
+    yaw = float(words[i+3])
+    vehicleNode3D.append([vehicle_x, vehicle_y, yaw])
     return i + 11  
 
 def process_type_2(words, i, vehicleNode3D):
     vehicle_x, vehicle_y = calculate_position(words[i+1], words[i+2])
     quaternion = [float(words[j]) for j in range(i+4, i+8)]
-    roll, pitch, yaw = quaternion_to_euler(*quaternion)
-    vehicleNode3D.append([vehicle_x, vehicle_y, yaw])
+    # roll, pitch, yaw = quaternion_to_euler(*quaternion)
+    # vehicleNode3D.append([vehicle_x, vehicle_y, yaw])
     return i + 15  
 
 def process_type_3(draw, words, i):
