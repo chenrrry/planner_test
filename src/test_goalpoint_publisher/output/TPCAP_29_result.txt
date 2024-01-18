@@ -1,0 +1,18 @@
+111 /home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/output/TPCAP_29_result.txt
+x: 120 y: 364 z: 3.1415
+x: 569 y: 226 z: 3.1415
+data: 0
+cp0size 2
+publishNextGoalPoint
+0
+0014.63268e-05
+publish start and goal
+data: -1
+/home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/output/TPCAP_29_resultViz_0.txt
+1
+2
+data: 1
+Reached point 0 in 15.4102 seconds.
+cp2size 2
+publishNextGoalPoint
+data: -2

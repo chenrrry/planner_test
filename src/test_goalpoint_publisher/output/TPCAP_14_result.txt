@@ -12,7 +12,7 @@ data: -1
 1
 2
 data: 1
-Reached point 0 in 21.031 seconds.
+Reached point 0 in 3.16248 seconds.
 cp2size 2
 publishNextGoalPoint
 data: -2

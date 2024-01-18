@@ -9,8 +9,7 @@ from matplotlib import font_manager
 # plt.rcParams['font.sans-serif'] = ['SimHei']
 # plt.rcParams['axes.unicode_minus'] = False
 
-whether_fit = True
-whtether_use_success_file = False
+
 def quaternion_to_euler(x, y, z,w):
     """
     将四元数(w, x, y, z)转换为欧拉角(roll, pitch, yaw)。
@@ -22,7 +21,9 @@ def quaternion_to_euler(x, y, z,w):
 vehicleNode3D = []
 
 # 打开图片
-index = 23
+index = 10
+whether_fit = True
+whtether_use_success_file = True
 image = Image.open(f"./src/test_goalpoint_publisher/data/TPCAP/TPCAP_{index}.png")
 width, height = image.size
 
@@ -82,7 +83,7 @@ def process_type_3(draw, words, i):
         point_x, point_y = calculate_position(words[i], words[i+1])
         points.append((point_x, point_y))
         i += 3
-    draw.line(points + [points[0]], fill='black', width=4)
+    draw.line(points + [points[0]], fill='blue', width=4)
     return i
 
 i = 0
