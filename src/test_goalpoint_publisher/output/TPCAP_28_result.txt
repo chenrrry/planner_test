@@ -1,6 +1,6 @@
 111 /home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/output/TPCAP_28_result.txt
-x: 76 y: 60 z: 1.57075
-x: 350 y: 50 z: 0
+x: 40 y: 60 z: 1.57075
+x: 320 y: 50 z: 0
 data: 0
 cp0size 2
 publishNextGoalPoint
@@ -9,9 +9,10 @@ publishNextGoalPoint
 publish start and goal
 data: -1
 /home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/output/TPCAP_28_resultViz_0.txt
+0
 1
 data: 1
-Reached point 0 in 21.3914 seconds.
+Reached point 0 in 16.8605 seconds.
 cp2size 2
 publishNextGoalPoint
 data: -2

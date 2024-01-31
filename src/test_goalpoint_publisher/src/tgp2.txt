@@ -33,6 +33,7 @@ private:
     ros::Subscriber subPathVehicles;
     ros::Subscriber subPath2DNodes;
     ros::Subscriber subPathBoxes;
+    ros::Subscriber sub2dPath;
 
     std::string test_file;
 
@@ -55,6 +56,7 @@ private:
     void pathVehiclesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
     void path2DNodesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
     void pathBoxesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
+    void path2DCallback(const nav_msgs::Path::ConstPtr& msg);
     void writeCallback(const ros::TimerEvent&) {
         outfile.flush(); 
         outfile_viz.flush(); 
@@ -78,6 +80,7 @@ GoalPointPublisher::GoalPointPublisher()
     pub_start_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1);
     pub_goal_ = nh_.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1);
     sub_ = nh_.subscribe("/start_notification", 5, &GoalPointPublisher::numberCallback, this);
+    sub2dPath = nh_.subscribe("/path2DNodes", 1000, &GoalPointPublisher::path2DCallback, this);
     if(subSmoothTopic){
         subPath = nh_.subscribe("sPath", 1000, &GoalPointPublisher::pathCallback, this);
         subPathNodes = nh_.subscribe("sPathNodes", 1000, &GoalPointPublisher::pathNodesCallback, this);
@@ -255,15 +258,24 @@ void GoalPointPublisher::pathCallback(const nav_msgs::Path::ConstPtr& msg) {
     // 处理路径数据
     
 }
-
+void GoalPointPublisher::path2DCallback(const nav_msgs::Path::ConstPtr& msg) {
+    outfile<<"0"<<std::endl;
+    for (const auto& pose : msg->poses) {
+        outfile_viz << "0" << std::endl;
+        outfile_viz << pose.pose.position.x << " "<< pose.pose.position.y << std::endl;
+    }
+}
 
 void GoalPointPublisher::pathNodesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg) {
     outfile<<"1"<<std::endl;
-    for (const auto& marker : msg->markers) { //注意这里的z值其实是yaw
+    for (const auto& marker : msg->markers) {
         outfile_viz << "1" << std::endl;
         outfile_viz << marker.pose.position.x << " "<< marker.pose.position.y << " " << marker.pose.position.z << std::endl;
+        outfile_viz << marker.scale.x << " " << marker.scale.y << " " << marker.scale.z << std::endl;
+        outfile_viz << marker.color.r << " "<< marker.color.r << " " << marker.color.r << " " << marker.color.a << std::endl;
     }
-    // Index为1，第一排为位置信息xyz
+    // 记录3D路径节点信息
+    // Index为1，第一排为位置信息xyz，第二排为缩放信息xyz，第三排为颜色信息rgba
 }
 
 void GoalPointPublisher::pathVehiclesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg) {
@@ -271,16 +283,18 @@ void GoalPointPublisher::pathVehiclesCallback(const visualization_msgs::MarkerAr
     for (const auto& marker : msg->markers) {
         if(marker.type==visualization_msgs::Marker::CUBE){
             outfile_viz << "2" << std::endl;
-            outfile_viz << marker.pose.position.x << " "<< marker.pose.position.y << std::endl;
+            outfile_viz << marker.pose.position.x << " "<< marker.pose.position.y << " " << marker.pose.position.z << std::endl;
             outfile_viz << marker.pose.orientation.x << " "<< marker.pose.orientation.y << " " << marker.pose.orientation.z << " "
                 << marker.pose.orientation.w << std::endl;
+            outfile_viz << marker.scale.x << " " << marker.scale.y << " " << marker.scale.z << std::endl;
+            outfile_viz << marker.color.r << " "<< marker.color.r << " " << marker.color.r << " " << marker.color.a << std::endl;
             // 记录3D路径车辆数据
             // Index为2，第一排为位置信息xyz，第二排为缩放信息xyz，第三排为方向信息xyzw，第三排为颜色信息rgb
         }else{
             outfile_viz << "3" << std::endl;
-            for (size_t i = 0; i < marker.points.size(); i += 2) { //正方形不需要记录z，因为全是0
+            for (size_t i = 0; i < marker.points.size(); i += 2) {
                 const auto& point = marker.points[i];
-                outfile_viz << point.x << " " << point.y << std::endl;
+                outfile_viz << point.x << " " << point.y << " " << point.z << std::endl;
             }
         }
         }
@@ -289,11 +303,15 @@ void GoalPointPublisher::pathVehiclesCallback(const visualization_msgs::MarkerAr
 }
 
 void GoalPointPublisher::path2DNodesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg) {
-    outfile<<"0"<<std::endl;
-    for (const auto& marker : msg->markers) {
-        outfile_viz << "0" << std::endl;
-        outfile_viz << marker.pose.position.x << " "<< marker.pose.position.y << std::endl;
-    }
+    // outfile<<"3 "<<std::endl;
+    // for (const auto& marker : msg->markers) {
+    //     outfile_viz << "3" << std::endl;
+    //     outfile_viz << marker.pose.position.x << " "<< marker.pose.position.y << " " << marker.pose.position.z << std::endl;
+    //     outfile_viz << marker.scale.x << " " << marker.scale.y << " " << marker.scale.z << std::endl;
+    //     outfile_viz << marker.color.r << " "<< marker.color.r << " " << marker.color.r << " " << marker.color.a << std::endl;
+    // }
+    // 记录2D路径节点信息
+    // Index为3，第一排为位置信息xyz，第二排为缩放信息xyz，第三排为颜色信息rgba
 }
 
 void GoalPointPublisher::pathBoxesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg) {

@@ -21,7 +21,7 @@ def quaternion_to_euler(x, y, z,w):
 vehicleNode3D = []
 
 # 打开图片
-index = 10
+index = 31
 whether_fit = True
 whtether_use_success_file = True
 image = Image.open(f"./src/test_goalpoint_publisher/data/TPCAP/TPCAP_{index}.png")

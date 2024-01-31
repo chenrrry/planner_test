@@ -9,10 +9,11 @@ publishNextGoalPoint
 publish start and goal
 data: -1
 /home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/output/TPCAP_5_resultViz_0.txt
-1
-2
+0
 data: 1
-Reached point 0 in 0.115785 seconds.
+Reached point 0 in 5.55243 seconds.
 cp2size 2
 publishNextGoalPoint
 data: -2
+1
+2
