@@ -17,6 +17,7 @@
 #include <tf/tf.h>
 #include <nlohmann/json.hpp>
 #include <fstream>
+#include <std_msgs/String.h>
 // 使用命名空间以简化代码
 using json = nlohmann::json;
 
@@ -33,7 +34,7 @@ private:
     ros::Subscriber subPathVehicles;
     ros::Subscriber subPath2DNodes;
     ros::Subscriber subPathBoxes;
-
+    ros::Subscriber subAlgorithm;
     std::string test_file;
 
     std::vector<geometry_msgs::Point> points_;
@@ -55,12 +56,14 @@ private:
     void pathVehiclesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
     void path2DNodesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
     void pathBoxesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
+    void algorithmCallback(const std_msgs::String::ConstPtr& msg);
     void writeCallback(const ros::TimerEvent&) {
         outfile.flush(); 
         outfile_viz.flush(); 
-        std::cout<<"已经写入文件"<<std::endl;
+        // std::cout<<"已经写入文件"<<std::endl;
     }
     bool whetherPublishFirstGoalPoint = false;
+    std::string algorithm;
 
 public:
     GoalPointPublisher();
@@ -78,6 +81,7 @@ GoalPointPublisher::GoalPointPublisher()
     pub_start_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1);
     pub_goal_ = nh_.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1);
     sub_ = nh_.subscribe("/start_notification", 5, &GoalPointPublisher::numberCallback, this);
+    subAlgorithm = nh_.subscribe("/algForHA",5,&GoalPointPublisher::algorithmCallback,this);
     if(subSmoothTopic){
         subPath = nh_.subscribe("sPath", 1000, &GoalPointPublisher::pathCallback, this);
         subPathNodes = nh_.subscribe("sPathNodes", 1000, &GoalPointPublisher::pathNodesCallback, this);
@@ -175,7 +179,7 @@ void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //
     outfile<<"data: "<<number<<std::endl;
     if(number==-1){
         std::string output_file_path_viz = ros::package::getPath("test_goalpoint_publisher") + 
-            "/output/"+test_file+"_resultViz_"+std::to_string(current_point_index_/2)+".txt";; 
+            "/output/"+this->algorithm+"/"+test_file+"_resultViz_"+std::to_string(current_point_index_/2)+".txt";; 
         outfile_viz.open(output_file_path_viz);
         outfile<<output_file_path_viz<<std::endl;
         return;
@@ -183,6 +187,7 @@ void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //
     if(number == -2){
         // outfile_viz.flush();
         // outfile_viz.close();//发送2不能立马关闭，因为之前的可能没有来得及处理 
+        std::cout << "接收到搜索完成的消息" << std::endl;
         return;
     }
     if (number==0)  // Threshold to consider "reached", you can adjust as needed
@@ -308,6 +313,21 @@ void GoalPointPublisher::pathBoxesCallback(const visualization_msgs::MarkerArray
 
 }
 
+void GoalPointPublisher::algorithmCallback(const std_msgs::String::ConstPtr& msg) {
+    std::string received_data = msg->data;
+    if(received_data == "contour_hybrid_astar"){
+        this->algorithm = "ENHA";
+        std::cout << "测试节点接收到算法" << received_data <<std::endl;
+    }else if(received_data == "hybrid_astar"){
+        this->algorithm = "HA";
+        std::cout << "测试节点接收到算法" << received_data <<std::endl;
+    }else if(received_data == "split_hybrid_astar"){
+        this->algorithm = "EHHA";
+        std::cout << "测试节点接收到算法" << received_data <<std::endl;
+    }else{
+        std::cout << "非常危险，出现了不能处理的算法"<<std::endl;
+    }
+}
 
 int main(int argc, char** argv)
 {

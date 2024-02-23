@@ -8,12 +8,12 @@ publishNextGoalPoint
 0014.63268e-05
 publish start and goal
 data: -1
-/home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/output/TPCAP_29_resultViz_0.txt
+/home/zly/plannerAll/planner_test/src/test_goalpoint_publisher/output/ENHA/TPCAP_29_resultViz_0.txt
 0
 1
+2
 data: 1
-Reached point 0 in 17.0049 seconds.
+Reached point 0 in 22.4872 seconds.
 cp2size 2
 publishNextGoalPoint
 data: -2
-2
