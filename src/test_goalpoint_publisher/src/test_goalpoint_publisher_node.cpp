@@ -18,6 +18,15 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <std_msgs/String.h>
+#include <iostream>
+#include <cstring>      // for memset
+#include <sys/socket.h> // for socket functions
+#include <netinet/in.h> // for sockaddr_in
+#include <arpa/inet.h>  // for inet_pton
+#include <unistd.h>     // for close
+#include <boost/filesystem.hpp>
+#include <algorithm>
+using namespace boost::filesystem;
 // 使用命名空间以简化代码
 using json = nlohmann::json;
 
@@ -45,7 +54,10 @@ private:
     std::ofstream outfile;
     std::ofstream outfile_viz;
     ros::Timer timerForWrite;
+    ros::Timer inactivity_timer_;
 
+    bool has_received_msg_since_last_check_;
+    ros::Publisher termination_pub_;
 
     void numberCallback(const std_msgs::Int32::ConstPtr& msg);
     void publishGoalPoint(const geometry_msgs::Point& start_point, const geometry_msgs::Point& goal_point);
@@ -57,6 +69,8 @@ private:
     void path2DNodesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
     void pathBoxesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
     void algorithmCallback(const std_msgs::String::ConstPtr& msg);
+    void inactivityTimeout(const ros::TimerEvent&);
+    void resetTimeForInactivity();
     void writeCallback(const ros::TimerEvent&) {
         outfile.flush(); 
         outfile_viz.flush(); 
@@ -78,6 +92,7 @@ public:
 GoalPointPublisher::GoalPointPublisher()
     : current_point_index_(0)
 {
+    
     pub_start_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1);
     pub_goal_ = nh_.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1);
     sub_ = nh_.subscribe("/start_notification", 5, &GoalPointPublisher::numberCallback, this);
@@ -98,7 +113,7 @@ GoalPointPublisher::GoalPointPublisher()
     }
     timerForWrite = nh_.createTimer(ros::Duration(1), &GoalPointPublisher::writeCallback, this);
     std::string pkg_path = ros::package::getPath("test_goalpoint_publisher");
-    std::cout << "current package : " << pkg_path;
+    std::cout << "current package : " << pkg_path <<std::endl;
     // 创建一个json对象
     json j;
 
@@ -123,6 +138,7 @@ GoalPointPublisher::GoalPointPublisher()
 
     last_point_time_ = ros::Time::now();
     std::cout << "初始化handler已经完成" << std::endl;
+
 }
 
 GoalPointPublisher::~GoalPointPublisher() 
@@ -165,6 +181,36 @@ void GoalPointPublisher::pushPoint(double x, double y, double z)
     outfile<<"x: "<<x<<" y: "<<y<<" z: "<<z<<std::endl;
 }
 
+int findNextIndex(const std::string& directory, const std::string& prefix) {
+    path dirPath(directory);
+    int maxIndex = -1; // 初始最大索引值
+
+    if (exists(dirPath) && is_directory(dirPath)) {
+        for (auto& entry : directory_iterator(dirPath)) {
+            path filePath = entry.path();
+            if (is_regular_file(filePath)) {
+                // 提取文件名并检查是否匹配所需的前缀
+                std::string fileName = filePath.filename().string();
+                if (fileName.find(prefix) != std::string::npos) {
+                    // 解析文件名以找到索引
+                    size_t lastPos = fileName.find_last_of("_"); // 假设索引前有一个下划线
+                    size_t dotPos = fileName.find_last_of("."); // 找到文件扩展名的点
+                    if (lastPos != std::string::npos && dotPos != std::string::npos) {
+                        std::string indexStr = fileName.substr(lastPos + 1, dotPos - lastPos - 1);
+                        try {
+                            int index = std::stoi(indexStr);
+                            maxIndex = std::max(maxIndex, index);
+                        } catch (const std::invalid_argument& e) {
+                            // 忽略无法转换为整数的文件名
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return maxIndex + 1; // 返回最大索引加1
+}
 
 void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //收到类型更改
 {   
@@ -178,8 +224,11 @@ void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //
     int number = msg->data;
     outfile<<"data: "<<number<<std::endl;
     if(number==-1){
+        std::string output_directory = ros::package::getPath("test_goalpoint_publisher") + "/output/"+this->algorithm;
+        std::string file_prefix = test_file+"_resultViz_"; // 根据实际情况调整前缀
+        int max_file_index = findNextIndex(output_directory, file_prefix);
         std::string output_file_path_viz = ros::package::getPath("test_goalpoint_publisher") + 
-            "/output/"+this->algorithm+"/"+test_file+"_resultViz_"+std::to_string(current_point_index_/2)+".txt";; 
+            "/output/"+this->algorithm+"/"+test_file+"_resultViz_"+std::to_string(max_file_index)+".txt";
         outfile_viz.open(output_file_path_viz);
         outfile<<output_file_path_viz<<std::endl;
         return;
@@ -188,6 +237,12 @@ void GoalPointPublisher::numberCallback(const std_msgs::Int32::ConstPtr& msg) //
         // outfile_viz.flush();
         // outfile_viz.close();//发送2不能立马关闭，因为之前的可能没有来得及处理 
         std::cout << "接收到搜索完成的消息" << std::endl;
+        // Initialize the timer with a 1-second duration, triggering inactivityTimeout
+        inactivity_timer_ = nh_.createTimer(ros::Duration(3), &GoalPointPublisher::inactivityTimeout, this);
+
+        // Initialize your termination publisher (if not already done)
+        termination_pub_ = nh_.advertise<std_msgs::String>("/termination_topic", 1);
+        std::cout << "初始化定时器" << std::endl;
         return;
     }
     if (number==0)  // Threshold to consider "reached", you can adjust as needed
@@ -269,8 +324,15 @@ void GoalPointPublisher::pathNodesCallback(const visualization_msgs::MarkerArray
         outfile_viz << marker.pose.position.x << " "<< marker.pose.position.y << " " << marker.pose.position.z << std::endl;
     }
     // Index为1，第一排为位置信息xyz
+    if (inactivity_timer_ !=nullptr){
+        resetTimeForInactivity();
+    }
 }
-
+void GoalPointPublisher::resetTimeForInactivity(){
+    inactivity_timer_.stop();
+    inactivity_timer_.start();
+    has_received_msg_since_last_check_ = true;
+}
 void GoalPointPublisher::pathVehiclesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg) {
     outfile<<"2"<<std::endl;
     for (const auto& marker : msg->markers) {
@@ -291,6 +353,9 @@ void GoalPointPublisher::pathVehiclesCallback(const visualization_msgs::MarkerAr
         }
     // 记录3D路径车辆数据
     // Index为2，第一排为位置信息xyz，第二排为缩放信息xyz，第三排为方向信息xyzw，第三排为颜色信息rgb
+    if (inactivity_timer_ !=nullptr){
+        resetTimeForInactivity();
+    }
 }
 
 void GoalPointPublisher::path2DNodesCallback(const visualization_msgs::MarkerArray::ConstPtr& msg) {
@@ -326,6 +391,60 @@ void GoalPointPublisher::algorithmCallback(const std_msgs::String::ConstPtr& msg
         std::cout << "测试节点接收到算法" << received_data <<std::endl;
     }else{
         std::cout << "非常危险，出现了不能处理的算法"<<std::endl;
+    }
+}
+
+bool sendPacket(const std::string& ip, int port, const std::string& data) {
+    // 创建套接字
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        std::cerr << "Error creating socket." << std::endl;
+        return false;
+    }
+
+    // 构建服务器地址结构
+    struct sockaddr_in serv_addr;
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, ip.c_str(), &serv_addr.sin_addr) <= 0) {
+        std::cerr << "Invalid address/ Address not supported." << std::endl;
+        close(sockfd);
+        return false;
+    }
+
+    // 连接到服务器
+    if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        std::cerr << "Connection Failed." << std::endl;
+        close(sockfd);
+        return false;
+    }
+
+    // 发送数据
+    send(sockfd, data.c_str(), data.length(), 0);
+
+    // 关闭套接字
+    close(sockfd);
+
+    return true;
+}
+
+
+// Add a method to handle the timeout
+void GoalPointPublisher::inactivityTimeout(const ros::TimerEvent&) {
+    std::cout <<"执行一次定时器"<<std::endl;
+    if (!has_received_msg_since_last_check_) {
+        // No messages received since the last check, send termination signal
+        std_msgs::String msg;
+        msg.data = "terminate";
+        // Assuming you have a publisher set up to communicate with the other node
+        termination_pub_.publish(msg);
+        ROS_INFO("Inactivity timeout reached. Sent termination signal.");
+        std::cout << "terminate" << std::endl;
+        sendPacket("127.0.0.1", 12345, "terminate");
+    } else {
+        // Reset for the next period
+        has_received_msg_since_last_check_ = false;
     }
 }
 
