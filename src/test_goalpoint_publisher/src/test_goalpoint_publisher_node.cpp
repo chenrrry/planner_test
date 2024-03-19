@@ -126,7 +126,7 @@ GoalPointPublisher::GoalPointPublisher()
 
     std::string points_file_path = pkg_path + "/data/"+test_file+".txt";
     std::vector<geometry_msgs::Point> points_from_file = readPointsFromFile(points_file_path);
-    std::string output_file_path = pkg_path + "/output/"+test_file+"_result.txt";
+    std::string output_file_path = pkg_path + "/outputUseless/"+test_file+"_result.txt";
     outfile.open(output_file_path);
 
     outfile<<"111 "<<output_file_path<<std::endl;
@@ -388,6 +388,9 @@ void GoalPointPublisher::algorithmCallback(const std_msgs::String::ConstPtr& msg
         std::cout << "测试节点接收到算法" << received_data <<std::endl;
     }else if(received_data == "split_hybrid_astar"){
         this->algorithm = "EHHA";
+        std::cout << "测试节点接收到算法" << received_data <<std::endl;
+    }else if(received_data == "rrt"){
+        this->algorithm = "RRT";
         std::cout << "测试节点接收到算法" << received_data <<std::endl;
     }else{
         std::cout << "非常危险，出现了不能处理的算法"<<std::endl;
